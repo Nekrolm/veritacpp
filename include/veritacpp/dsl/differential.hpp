@@ -88,33 +88,76 @@ constexpr Differentiable auto diff(Variable<N>, Variable<M>) {
     }
 }
 
+template <Differentiable F>
+struct Negate : DifferentialBase {
+    F f;
+    explicit constexpr Negate(F f) : f(f) {}
+
+    template <Arithmetic... Args>
+    constexpr Arithmetic auto operator()(Args... x) const {
+        return -(f(x...));
+    } 
+};
+
+template<Differentiable F>
+constexpr Differentiable auto operator - (F f) {
+    return Negate<F> { f };
+}
+
+template<Differentiable F>
+constexpr Differentiable auto operator + (F f) {
+    return f;
+}
+
+template<Differentiable F, DifferentialVariable X>
+constexpr Differentiable auto diff(Negate<F> nf, X x) {
+    return -diff(nf.f, x);
+}
 
 
-template<Differentiable... F>
-struct Sum : DifferentialBase {
-    std::tuple<F...> fs;
-    explicit constexpr Sum(F... f) : fs { f... } {};
-    explicit constexpr Sum(std::tuple<F...> fs) : fs { std::move(fs)} {}
+template<Differentiable F1, Differentiable F2>
+struct Add : DifferentialBase {
+    F1 f1;
+    F2 f2;
+    explicit constexpr Add(F1 f1, F2 f2) : f1{f1}, f2{f2} {};
 
     template<Arithmetic... Args>
     constexpr Arithmetic auto operator()(Args... x) const {
-        auto args = std::make_tuple(x...);
-        return std::apply([&args](auto&&... f){
-            return (std::apply(f, args) + ...);
-        }, fs);
+        return f1(x...) + f2(x...);
     }
 };
 
 template <Differentiable A, Differentiable B>
 constexpr Differentiable auto operator + (A a, B b) {
-    return Sum { a, b };
+    return Add { a, b };
 }
 
-template<Differentiable... F, DifferentialVariable X>
-constexpr Differentiable auto diff(Sum<F...> s, X x) {
-    return std::apply([x](auto... f){
-              return (diff(f, x) + ...);
-           }, s.fs);
+template<Differentiable A, Differentiable B, DifferentialVariable X>
+constexpr Differentiable auto diff(Add<A, B> s, X x) {
+    return diff(s.f1, x) + diff(s.f2, x);
+}
+
+
+template<Differentiable F1, Differentiable F2>
+struct Sub : DifferentialBase {
+    F1 f1;
+    F2 f2;
+    explicit constexpr Sub(F1 f1, F2 f2) : f1{f1}, f2{f2} {};
+
+    template<Arithmetic... Args>
+    constexpr Arithmetic auto operator()(Args... x) const {
+        return f1(x...) - f2(x...);
+    }
+};
+
+template <Differentiable A, Differentiable B>
+constexpr Differentiable auto operator - (A a, B b) {
+    return Sub { a, b };
+}
+
+template<Differentiable A, Differentiable B, DifferentialVariable X>
+constexpr Differentiable auto diff(Sub<A, B> s, X x) {
+    return diff(s.f1, x) - diff(s.f2, x);
 }
 
 
@@ -142,7 +185,7 @@ constexpr Differentiable auto operator * (F1 f1, F2 f2) {
 
 template <Differentiable F1, Differentiable F2, DifferentialVariable X>
 constexpr Differentiable auto diff(Mul<F1, F2> m, X x) { 
-        return  diff(m.f1, x) * m.f2 + m.f1 * diff(m.f2, x);
+    return diff(m.f1, x) * m.f2 + m.f1 * diff(m.f2, x);
 };
 
 template <Differentiable F, Differentiable... Gs>
@@ -202,9 +245,9 @@ static constexpr Differentiable auto apply_chain_rule(F f, X x, Gs... gs) {
 
 template <Differentiable F, Differentiable... Gs, DifferentialVariable X>
 constexpr Differentiable auto diff(App<F, Gs...> ap, X x) {
-        return std::apply([&](Gs... gs){
-            return detail::apply_chain_rule(ap.f, x, gs...);
-        },  ap.gs);
+    return std::apply([&](Gs... gs){
+         return detail::apply_chain_rule(ap.f, x, gs...);
+    },  ap.gs);
 };
 
 

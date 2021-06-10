@@ -42,4 +42,11 @@ int main() {
     static_assert(dc9x2dx(1) == 18);
     constexpr auto dc9x2dy = diff(c9x2, y);
     static_assert(dc9x2dy(1, 1) == 0);
+
+
+    constexpr auto neg_x2 = -x * x;
+
+    static_assert(neg_x2(5) == -25);
+    static_assert(diff(neg_x2, x)(5) == -10);
+
 }
