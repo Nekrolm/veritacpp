@@ -49,4 +49,43 @@ int main() {
     static_assert(neg_x2(5) == -25);
     static_assert(diff(neg_x2, x)(5) == -10);
 
+    constexpr auto x_sub_y = x - y;
+    static_assert(x_sub_y(5,6) == -1);
+
+    constexpr auto x_div_y = x / y;
+
+    static_assert(diff(x_div_y, y)(1, 0.5) == -4);
+
+    {
+        constexpr auto x3 = x^3;
+        static_assert(x3(5) == 125);
+        static_assert(diff(x3, x)(5) == 3 * 25);
+    }
+
+    {
+        constexpr auto poly = (x^2) + (x^3) - 5*x + 3;
+        static_assert(poly(2) == 2*2 + 2*2*2 - 5*2 + 3);
+        constexpr auto dpoly = diff(poly, x);
+        static_assert(dpoly(2) == 2*2 + 3*2*2 - 5);
+        
+    }
+
+    {
+        constexpr auto trig_eq = (sin(x) ^ 2) + (cos(x) ^ 2);
+        static_assert(trig_eq(0) == 1);
+        static_assert(trig_eq(2) == 1);
+        static_assert(std::abs(trig_eq(3) - 1) < 1e-6); // precision error :(
+
+        static_assert(diff(sin(x), x)(0) == cos(x)(0)); 
+        static_assert(diff(sin(x), x)(2) == cos(x)(2));
+        static_assert(diff(cos(x), x)(2) == (-sin(x))(2));       
+    }
+
+
+    {
+        // constexpr auto x_add_y = x + y;
+        // constexpr auto f = x_add_y | (x=sin(y), y=x^2);
+        // static_assert(f(3,4) == std::sin(4) + 3*3);
+    }
+
 }

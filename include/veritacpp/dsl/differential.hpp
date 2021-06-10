@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <tuple>
 #include <utility>
+#include <cmath>
 
 #include <veritacpp/utils/tuple.hpp>
 
@@ -18,13 +19,35 @@ concept Differentiable = std::is_base_of_v<DifferentialBase, T>;
 template <class T>
 concept Arithmetic = std::is_arithmetic_v<T>;
 
-template <auto C> requires Arithmetic<decltype(C)>
+template <Arithmetic auto C>
 struct Constant : DifferentialBase {
     template <Arithmetic... Args>
     constexpr Arithmetic auto operator() (Args...) const {
         return C;
     }
 };
+
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator + (Constant<C1>, Constant<C2> c2) {
+    return Constant<C1 + C2>{};
+}
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator * (Constant<C1>, Constant<C2> c2) {
+    return Constant<C1 * C2>{};
+}
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator / (Constant<C1>, Constant<C2> c2) {
+    return Constant<C1 / C2>{};
+}
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator - (Constant<C1>, Constant<C2> c2) {
+    return Constant<C1 - C2>{};
+}
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator ^ (Constant<C1>, Constant<C2> c2) {
+    return Constant<std::pow(C1,  C2)>{};
+}
+
 
 constexpr auto kZero = Constant<0>{};
 constexpr auto kOne = Constant<1>{};
@@ -39,6 +62,28 @@ struct RTConstant : DifferentialBase {
         return value;
     }
 };
+
+template<Arithmetic T1, Arithmetic T2>
+constexpr auto operator + (RTConstant<T1> c1, RTConstant<T2> c2) {
+    return RTConstant { c1.value + c2.value };
+}
+template<Arithmetic T1, Arithmetic T2>
+constexpr auto operator * (RTConstant<T1> c1, RTConstant<T2> c2) {
+    return RTConstant { c1.value * c2.value };
+}
+template<Arithmetic T1, Arithmetic T2>
+constexpr auto operator - (RTConstant<T1> c1, RTConstant<T2> c2) {
+    return RTConstant { c1.value - c2.value };
+}
+template<Arithmetic T1, Arithmetic T2>
+constexpr auto operator / (RTConstant<T1> c1, RTConstant<T2> c2) {
+    return RTConstant { c1.value / c2.value };
+}
+template<Arithmetic T1, Arithmetic T2>
+constexpr auto operator ^ (RTConstant<T1> c1, RTConstant<T2> c2) {
+    return RTConstant { std::pow(c1.value,  c2.value) };
+}
+
 
 constexpr RTConstant<double> operator "" _c (unsigned long long x) {
     return RTConstant { static_cast<double>( x ) };
@@ -174,8 +219,6 @@ struct Mul : DifferentialBase {
    }
 };
 
-template<Differentiable F1, Differentiable F2>
-Mul(F1, F2) -> Mul<F1, F2>;
 
 template<Differentiable F1, Differentiable F2>
 constexpr Differentiable auto operator * (F1 f1, F2 f2) {
@@ -187,6 +230,30 @@ template <Differentiable F1, Differentiable F2, DifferentialVariable X>
 constexpr Differentiable auto diff(Mul<F1, F2> m, X x) { 
     return diff(m.f1, x) * m.f2 + m.f1 * diff(m.f2, x);
 };
+
+
+template <Differentiable F1, Differentiable F2>
+struct Div : DifferentialBase {
+    F1 f1;
+    F2 f2;
+    constexpr Div(F1 f1, F2 f2) : f1{f1}, f2{f2} {}
+
+    template <Arithmetic... Args>
+    constexpr Arithmetic auto operator()(Args... x) const {
+       return f1(x...) / f2(x...);
+    }
+};
+
+template<Differentiable F1, Differentiable F2>
+constexpr Differentiable auto operator / (F1 f1, F2 f2) {
+    return Div { f1, f2 };
+}
+
+template <Differentiable F1, Differentiable F2, DifferentialVariable X>
+constexpr Differentiable auto diff(Div<F1, F2> d, X x) { 
+    return (diff(d.f1, x) * d.f2 - d.f1 * diff(d.f2, x)) / (d.f2 * d.f2);
+};
+
 
 template <Differentiable F, Differentiable... Gs>
 struct App : DifferentialBase {
@@ -312,5 +379,137 @@ constexpr Differentiable auto operator | (F f, detail::BindingTuple<G...> g) {
     return App<F, G...> { f, g.as_tuple() };
 }
 
+template <Arithmetic auto C>
+struct Pow : DifferentialBase {
+    template <Arithmetic X, Arithmetic... Args>
+    constexpr Arithmetic auto operator()(X x, Args...) const {
+       return std::pow(x, C);
+    }
+};
+
+template <Arithmetic auto C, uint64_t xid>
+constexpr Differentiable auto diff(Pow<C>, Variable<xid>) {
+    if constexpr(xid != 0) {
+        return kZero;
+    }
+    if constexpr (C == 0) {
+        return kOne;
+    }
+    return Constant<C>{} * Pow<C - 1>{};
+}
+
+
+
+template <Arithmetic auto C, Differentiable F>
+constexpr Differentiable auto operator ^ (F f, Constant<C>) {
+    return Pow<C>{} | f;
+}
+
+
+template <Arithmetic T>
+struct RTPow : DifferentialBase {
+
+    const RTConstant<T> deg;
+    explicit constexpr RTPow(RTConstant<T> deg) : deg { deg } {}
+
+    template <Arithmetic X, Arithmetic... Args>
+    constexpr Arithmetic auto operator()(X x, Args...) const {
+       return std::pow(x, deg());
+    }
+};
+
+template <Arithmetic T, uint64_t xid>
+constexpr Differentiable auto diff(RTPow<T> pw, Variable<xid>) {
+    if constexpr(xid != 0) {
+        return kZero;
+    }
+    return  pw.deg * RTPow(RTConstant<T>{pw.deg() - 1});
+}
+
+
+
+template <Arithmetic T, Differentiable F>
+constexpr Differentiable auto operator ^ (F f, RTConstant<T> c) {
+    return RTPow<T>{c} | f;
+} 
+
+template <Arithmetic T, Differentiable F>
+constexpr Differentiable auto operator ^ (F f, T c) {
+    return f ^ RTConstant<T> { c };
+} 
+
+
+template<Differentiable F, Arithmetic T>
+constexpr auto operator + (F f,  T c) {
+    return f + RTConstant { c }; 
+}
+template<Differentiable F, Arithmetic T>
+constexpr auto operator * (F f,  T c) {
+    return f * RTConstant { c }; 
+}
+template<Differentiable F, Arithmetic T>
+constexpr auto operator - (F f,  T c) {
+    return f - RTConstant { c }; 
+}
+template<Differentiable F, Arithmetic T>
+constexpr auto operator / (F f,  T c) {
+    return f / RTConstant { c }; 
+}
+
+template<Differentiable F, Arithmetic T>
+constexpr auto operator + (T c, F f) {
+    return  RTConstant { c } + f; 
+}
+template<Differentiable F, Arithmetic T>
+constexpr auto operator * (T c, F f) {
+    return  RTConstant { c } * f; 
+}
+template<Differentiable F, Arithmetic T>
+constexpr auto operator - (T c, F f) {
+    return  RTConstant { c } - f; 
+}
+template<Differentiable F, Arithmetic T>
+constexpr auto operator / (T c, F f) {
+    return  RTConstant { c } / f; 
+}
+
+
+struct Sin : DifferentialBase {
+    template <Arithmetic X, Arithmetic... Args>
+    constexpr Arithmetic auto operator()(X x, Args...) const {
+       return std::sin(x);
+    }
+};
+
+struct Cos : DifferentialBase {
+    template <Arithmetic X, Arithmetic... Args>
+    constexpr Arithmetic auto operator()(X x, Args...) const {
+       return std::cos(x);
+    }
+};
+
+
+template <uint64_t xid>
+constexpr Differentiable auto diff(Sin, Variable<xid>) {
+    if constexpr(xid != 0) {
+        return kZero;
+    }
+    return Cos{};
+}
+template <uint64_t xid>
+constexpr Differentiable auto diff(Cos, Variable<xid>) {
+    if constexpr(xid != 0) {
+        return kZero;
+    }
+    return -Sin{};
+}
+
+constexpr Differentiable auto sin(Differentiable auto f) {
+    return Sin{} | f;
+}
+
+constexpr Differentiable auto cos(Differentiable auto f) {
+    return Cos{} | f;
+}
 
 } // veritacpp::dsl
