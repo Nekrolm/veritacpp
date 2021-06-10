@@ -1,10 +1,10 @@
-#include <veritacpp/dsl/differential.hpp>
-#include <veritacpp/utils/tuple.hpp>
+#include <veritacpp/dsl/math/differential.hpp>
+#include <veritacpp/dsl/math/constants.hpp>
 
 #include <iostream>
 
 int main() {
-    using namespace veritacpp::dsl;
+    using namespace veritacpp::dsl::math;
 
     constexpr auto x = Variable<0>{};
     constexpr auto y = Variable<1>{};
