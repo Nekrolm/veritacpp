@@ -21,8 +21,7 @@ concept Arithmetic = std::is_arithmetic_v<T>;
 
 template <Arithmetic auto C>
 struct Constant : DifferentialBase {
-    template <Arithmetic... Args>
-    constexpr Arithmetic auto operator() (Args...) const {
+    constexpr Arithmetic auto operator() (Arithmetic auto...) const {
         return C;
     }
 };
@@ -57,8 +56,7 @@ struct RTConstant : DifferentialBase {
     const T value;
     explicit constexpr RTConstant(T val) : value(val) {} 
 
-    template <Arithmetic... Args>
-    constexpr Arithmetic auto operator() (Args...) const {
+    constexpr Arithmetic auto operator() (Arithmetic auto...) const {
         return value;
     }
 };
@@ -94,8 +92,9 @@ template <uint64_t N>
 struct Variable : DifferentialBase {
     static constexpr auto Id = N;
 
-    template <Arithmetic... Args> requires (sizeof...(Args) > N)
-    constexpr Arithmetic auto operator()(Args... args) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... args) const 
+    requires (sizeof...(args) > N)
+    {
         return std::get<N>(std::make_tuple(args...));
     }
 };
@@ -113,7 +112,7 @@ template <class T>
 concept DifferentialVariable = detail::IsVariable<T>::value;
 
 
-template <auto C, DifferentialVariable X>
+template <Arithmetic auto C, DifferentialVariable X>
 constexpr Differentiable auto diff(Constant<C>, X x) {
     return kZero;
 }
@@ -138,8 +137,7 @@ struct Negate : DifferentialBase {
     F f;
     explicit constexpr Negate(F f) : f(f) {}
 
-    template <Arithmetic... Args>
-    constexpr Arithmetic auto operator()(Args... x) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
         return -(f(x...));
     } 
 };
@@ -166,14 +164,13 @@ struct Add : DifferentialBase {
     F2 f2;
     explicit constexpr Add(F1 f1, F2 f2) : f1{f1}, f2{f2} {};
 
-    template<Arithmetic... Args>
-    constexpr Arithmetic auto operator()(Args... x) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
         return f1(x...) + f2(x...);
     }
 };
 
-template <Differentiable A, Differentiable B>
-constexpr Differentiable auto operator + (A a, B b) {
+constexpr Differentiable auto operator + (Differentiable auto a, 
+                                          Differentiable auto b) {
     return Add { a, b };
 }
 
@@ -189,14 +186,13 @@ struct Sub : DifferentialBase {
     F2 f2;
     explicit constexpr Sub(F1 f1, F2 f2) : f1{f1}, f2{f2} {};
 
-    template<Arithmetic... Args>
-    constexpr Arithmetic auto operator()(Args... x) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
         return f1(x...) - f2(x...);
     }
 };
 
-template <Differentiable A, Differentiable B>
-constexpr Differentiable auto operator - (A a, B b) {
+constexpr Differentiable auto operator - (Differentiable auto a, 
+                                          Differentiable auto b) {
     return Sub { a, b };
 }
 
@@ -213,15 +209,14 @@ struct Mul : DifferentialBase {
 
    constexpr Mul(F1 f1, F2 f2) : f1{f1}, f2{f2} {}
 
-   template <Arithmetic... Args>
-   constexpr Arithmetic auto operator()(Args... x) const {
+   constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
        return f1(x...) * f2(x...);
    }
 };
 
 
-template<Differentiable F1, Differentiable F2>
-constexpr Differentiable auto operator * (F1 f1, F2 f2) {
+constexpr Differentiable auto operator * (Differentiable auto f1, 
+                                          Differentiable auto f2) {
     return Mul { f1, f2 };
 }
 
@@ -238,14 +233,13 @@ struct Div : DifferentialBase {
     F2 f2;
     constexpr Div(F1 f1, F2 f2) : f1{f1}, f2{f2} {}
 
-    template <Arithmetic... Args>
-    constexpr Arithmetic auto operator()(Args... x) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
        return f1(x...) / f2(x...);
     }
 };
 
-template<Differentiable F1, Differentiable F2>
-constexpr Differentiable auto operator / (F1 f1, F2 f2) {
+constexpr Differentiable auto operator / (Differentiable auto f1, 
+                                          Differentiable auto f2) {
     return Div { f1, f2 };
 }
 
@@ -364,8 +358,8 @@ constexpr BindingGroup auto operator , (B1 b1, B2 b2) {
 } // detail
 
 
-template <Differentiable B1, Differentiable B2>
-constexpr detail::BindingGroup auto operator , (B1 b1, B2 b2) {
+constexpr detail::BindingGroup auto operator , (Differentiable auto b1,
+                                                Differentiable auto b2) {
     return detail::BindingTuple(b1, b2);
 }
 
@@ -381,8 +375,8 @@ constexpr Differentiable auto operator | (F f, detail::BindingTuple<G...> g) {
 
 template <Arithmetic auto C>
 struct Pow : DifferentialBase {
-    template <Arithmetic X, Arithmetic... Args>
-    constexpr Arithmetic auto operator()(X x, Args...) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto x, 
+                                         Arithmetic auto...) const {
        return std::pow(x, C);
     }
 };
@@ -400,8 +394,8 @@ constexpr Differentiable auto diff(Pow<C>, Variable<xid>) {
 
 
 
-template <Arithmetic auto C, Differentiable F>
-constexpr Differentiable auto operator ^ (F f, Constant<C>) {
+template <Arithmetic auto C>
+constexpr Differentiable auto operator ^ (Differentiable auto f, Constant<C>) {
     return Pow<C>{} | f;
 }
 
@@ -412,8 +406,8 @@ struct RTPow : DifferentialBase {
     const RTConstant<T> deg;
     explicit constexpr RTPow(RTConstant<T> deg) : deg { deg } {}
 
-    template <Arithmetic X, Arithmetic... Args>
-    constexpr Arithmetic auto operator()(X x, Args...) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto x, 
+                                         Arithmetic auto...) const {
        return std::pow(x, deg());
     }
 };
@@ -428,8 +422,9 @@ constexpr Differentiable auto diff(RTPow<T> pw, Variable<xid>) {
 
 
 
-template <Arithmetic T, Differentiable F>
-constexpr Differentiable auto operator ^ (F f, RTConstant<T> c) {
+template <Arithmetic T>
+constexpr Differentiable auto operator ^ (Differentiable auto f, 
+                                          RTConstant<T> c) {
     return RTPow<T>{c} | f;
 } 
 
