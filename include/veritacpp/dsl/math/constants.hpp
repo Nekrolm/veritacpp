@@ -88,7 +88,6 @@ constexpr auto operator * (Constant<C>, Functional auto f) {
     return f;
 }
 
-
 template <Arithmetic auto C>
 requires (C == 0)
 constexpr auto operator / (Constant<C> zero, Functional auto f) {

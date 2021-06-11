@@ -82,6 +82,9 @@ int main() {
     }
 
 
+    constexpr auto test_f = sin(x) - x + Constant<0>{};
+    // test_f();
+
     {
         // constexpr auto x_add_y = x + y;
         // constexpr auto f = x_add_y | (x=sin(y), y=x^2);
