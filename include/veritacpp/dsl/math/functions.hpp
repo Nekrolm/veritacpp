@@ -8,8 +8,8 @@
 
 namespace veritacpp::dsl::math { 
 
-template <Differentiable F>
-struct Negate : DifferentialBase {
+template <Functional F>
+struct Negate : BasicFunction {
     F f;
     explicit constexpr Negate(F f) : f(f) {}
 
@@ -18,18 +18,18 @@ struct Negate : DifferentialBase {
     } 
 };
 
-template<Differentiable F>
-constexpr Differentiable auto operator - (F f) {
+template<Functional F>
+constexpr Functional auto operator - (F f) {
     return Negate<F> { f };
 }
 
-template<Differentiable F>
-constexpr Differentiable auto operator + (F f) {
+template<Functional F>
+constexpr Functional auto operator + (F f) {
     return f;
 }
 
-template<Differentiable F1, Differentiable F2>
-struct Add : DifferentialBase {
+template<Functional F1, Functional F2>
+struct Add : BasicFunction {
     F1 f1;
     F2 f2;
     explicit constexpr Add(F1 f1, F2 f2) : f1{f1}, f2{f2} {};
@@ -39,13 +39,13 @@ struct Add : DifferentialBase {
     }
 };
 
-constexpr Differentiable auto operator + (Differentiable auto a, 
-                                          Differentiable auto b) {
+constexpr Functional auto operator + (Functional auto a, 
+                                          Functional auto b) {
     return Add { a, b };
 }
 
-template<Differentiable F1, Differentiable F2>
-struct Sub : DifferentialBase {
+template<Functional F1, Functional F2>
+struct Sub : BasicFunction {
     F1 f1;
     F2 f2;
     explicit constexpr Sub(F1 f1, F2 f2) : f1{f1}, f2{f2} {};
@@ -55,13 +55,13 @@ struct Sub : DifferentialBase {
     }
 };
 
-constexpr Differentiable auto operator - (Differentiable auto a, 
-                                          Differentiable auto b) {
+constexpr Functional auto operator - (Functional auto a, 
+                                          Functional auto b) {
     return Sub { a, b };
 }
 
-template<Differentiable F1, Differentiable F2>
-struct Mul : DifferentialBase {
+template<Functional F1, Functional F2>
+struct Mul : BasicFunction {
    F1 f1;
    F2 f2;
 
@@ -73,29 +73,30 @@ struct Mul : DifferentialBase {
 };
 
 
-constexpr Differentiable auto operator * (Differentiable auto f1, 
-                                          Differentiable auto f2) {
+constexpr Functional auto operator * (Functional auto f1, 
+                                          Functional auto f2) {
     return Mul { f1, f2 };
 }
 
-template <Differentiable F1, Differentiable F2>
-struct Div : DifferentialBase {
+template <Functional F1, Functional F2>
+struct Div : BasicFunction {
     F1 f1;
     F2 f2;
     constexpr Div(F1 f1, F2 f2) : f1{f1}, f2{f2} {}
 
-    constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const
+    {
        return f1(x...) / f2(x...);
     }
 };
 
-constexpr Differentiable auto operator / (Differentiable auto f1, 
-                                          Differentiable auto f2) {
+constexpr Functional auto operator / (Functional auto f1, 
+                                          Functional auto f2) {
     return Div { f1, f2 };
 }
 
-template <Differentiable F, Differentiable... Gs>
-struct App : DifferentialBase {
+template <Functional F, Functional... Gs>
+struct App : BasicFunction {
     F f;
     std::tuple<Gs...> gs;
     constexpr explicit App(F f, Gs... gs) : f(f), gs{gs...} {}
@@ -115,7 +116,7 @@ struct App : DifferentialBase {
 
 namespace detail {
 
-template <Differentiable... F>
+template <Functional... F>
 struct BindingTuple : std::tuple<F...> {
     using std::tuple<F...>::tuple;
 
@@ -125,17 +126,17 @@ struct BindingTuple : std::tuple<F...> {
 
 };
 
-template <Differentiable... F>
+template <Functional... F>
 BindingTuple(F...) -> BindingTuple<F...>;
 
-template <Differentiable... F>
+template <Functional... F>
 BindingTuple(std::tuple<F...>) -> BindingTuple<F...>;
 
 
 template <class T>
 struct IsBindingTuple : std::false_type {};
 
-template <Differentiable... F>
+template <Functional... F>
 struct IsBindingTuple<BindingTuple<F...>> : std::true_type {};
 
 template <class T>
@@ -146,12 +147,12 @@ constexpr BindingGroup auto operator , (B1 b1, B2 b2) {
     return BindingTuple { std::tuple_cat(b1.as_tuple(), b2.as_tuple()) };
 }
 
-template <Differentiable B1, BindingGroup B2>
+template <Functional B1, BindingGroup B2>
 constexpr BindingGroup auto operator , (B1 b1, B2 b2) {
     return BindingTuple { std::tuple_cat(std::make_tuple(b1), b2.as_tuple()) };
 }
 
-template <BindingGroup B1, Differentiable B2>
+template <BindingGroup B1, Functional B2>
 constexpr BindingGroup auto operator , (B1 b1, B2 b2) {
     return BindingTuple { std::tuple_cat(b1.as_tuple(), std::make_tuple(b2)) };
 }
@@ -159,23 +160,23 @@ constexpr BindingGroup auto operator , (B1 b1, B2 b2) {
 } // detail
 
 
-constexpr detail::BindingGroup auto operator , (Differentiable auto b1,
-                                                Differentiable auto b2) {
+constexpr detail::BindingGroup auto operator , (Functional auto b1,
+                                                Functional auto b2) {
     return detail::BindingTuple(b1, b2);
 }
 
-template <Differentiable F, Differentiable G>
-constexpr Differentiable auto operator | (F f, G g) {
+template <Functional F, Functional G>
+constexpr Functional auto operator | (F f, G g) {
     return App<F, G> { f, g };
 }
 
-template <Differentiable F, Differentiable... G>
-constexpr Differentiable auto operator | (F f, detail::BindingTuple<G...> g) {
+template <Functional F, Functional... G>
+constexpr Functional auto operator | (F f, detail::BindingTuple<G...> g) {
     return App<F, G...> { f, g.as_tuple() };
 }
 
 template <Arithmetic auto C>
-struct Pow : DifferentialBase {
+struct Pow : BasicFunction {
     constexpr Arithmetic auto operator()(Arithmetic auto x, 
                                          Arithmetic auto...) const {
        return std::pow(x, C);
@@ -183,13 +184,13 @@ struct Pow : DifferentialBase {
 };
 
 template <Arithmetic auto C>
-constexpr Differentiable auto operator ^ (Differentiable auto f, Constant<C>) {
+constexpr Functional auto operator ^ (Functional auto f, Constant<C>) {
     return Pow<C>{} | f;
 }
 
 
 template <Arithmetic T>
-struct RTPow : DifferentialBase {
+struct RTPow : BasicFunction {
 
     const RTConstant<T> deg;
     explicit constexpr RTPow(RTConstant<T> deg) : deg { deg } {}
@@ -202,65 +203,80 @@ struct RTPow : DifferentialBase {
 
 
 template <Arithmetic T>
-constexpr Differentiable auto operator ^ (Differentiable auto f, 
+constexpr Functional auto operator ^ (Functional auto f, 
                                           RTConstant<T> c) {
     return RTPow<T>{c} | f;
 } 
 
-template <Arithmetic T, Differentiable F>
-constexpr Differentiable auto operator ^ (F f, T c) {
+template <Arithmetic T, Functional F>
+constexpr Functional auto operator ^ (F f, T c) {
     return f ^ RTConstant<T> { c };
 } 
 
 
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator + (F f,  T c) {
     return f + RTConstant { c }; 
 }
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator * (F f,  T c) {
     return f * RTConstant { c }; 
 }
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator - (F f,  T c) {
     return f - RTConstant { c }; 
 }
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator / (F f,  T c) {
     return f / RTConstant { c }; 
 }
 
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator + (T c, F f) {
     return  RTConstant { c } + f; 
 }
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator * (T c, F f) {
     return  RTConstant { c } * f; 
 }
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator - (T c, F f) {
     return  RTConstant { c } - f; 
 }
-template<Differentiable F, Arithmetic T>
+template<Functional F, Arithmetic T>
 constexpr auto operator / (T c, F f) {
     return  RTConstant { c } / f; 
 }
 
 
-struct Sin : DifferentialBase {
+struct Sin : BasicFunction {
     template <Arithmetic X, Arithmetic... Args>
     constexpr Arithmetic auto operator()(X x, Args...) const {
        return std::sin(x);
     }
 };
 
-struct Cos : DifferentialBase {
+struct Cos : BasicFunction {
     template <Arithmetic X, Arithmetic... Args>
     constexpr Arithmetic auto operator()(X x, Args...) const {
        return std::cos(x);
     }
 };
+
+struct Exp : BasicFunction {
+    template <Arithmetic X, Arithmetic... Args>
+    constexpr Arithmetic auto operator()(X x, Args...) const {
+       return std::exp(x);
+    }
+};
+
+constexpr Functional auto sin(Functional auto f) {
+    return Sin{} | f;
+}
+
+constexpr Functional auto cos(Functional auto f) {
+    return Cos{} | f;
+}
 
 
 }

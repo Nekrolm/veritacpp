@@ -5,7 +5,7 @@
 namespace veritacpp::dsl::math {
 
 template <uint64_t N>
-struct Variable : DifferentialBase {
+struct Variable : BasicFunction {
     static constexpr auto Id = N;
 
     constexpr Arithmetic auto operator()(Arithmetic auto... args) const 

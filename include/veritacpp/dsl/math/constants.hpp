@@ -6,39 +6,116 @@
 namespace veritacpp::dsl::math { 
 
 template <Arithmetic auto C>
-struct Constant : DifferentialBase {
+struct Constant : BasicFunction {
     constexpr Arithmetic auto operator() (Arithmetic auto...) const {
         return C;
     }
 };
 
-template<Arithmetic auto C1, Arithmetic auto C2>
-constexpr auto operator + (Constant<C1>, Constant<C2> c2) {
-    return Constant<C1 + C2>{};
-}
-template<Arithmetic auto C1, Arithmetic auto C2>
-constexpr auto operator * (Constant<C1>, Constant<C2> c2) {
-    return Constant<C1 * C2>{};
-}
-template<Arithmetic auto C1, Arithmetic auto C2>
-constexpr auto operator / (Constant<C1>, Constant<C2> c2) {
-    return Constant<C1 / C2>{};
-}
-template<Arithmetic auto C1, Arithmetic auto C2>
-constexpr auto operator - (Constant<C1>, Constant<C2> c2) {
-    return Constant<C1 - C2>{};
-}
-template<Arithmetic auto C1, Arithmetic auto C2>
-constexpr auto operator ^ (Constant<C1>, Constant<C2> c2) {
-    return Constant<std::pow(C1,  C2)>{};
-}
-
-
 constexpr auto kZero = Constant<0>{};
 constexpr auto kOne = Constant<1>{};
 
+//------------------------------------------------------
+// general operations
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator + (Constant<C1>, Constant<C2>) {
+    return Constant<C1 + C2>{};
+}
+
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator * (Constant<C1>, Constant<C2>) {
+    return Constant<C1 * C2>{};
+}
+
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator / (Constant<C1>, Constant<C2>) {
+    static_assert(C2 != 0);
+    return Constant<C1 / C2>{};
+}
+template<Arithmetic auto C1>
+constexpr auto operator - (Constant<C1>) {
+    return Constant<-C1>{};
+}
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator - (Constant<C1>, Constant<C2>) {
+    return Constant<C1 - C2>{};
+}
+template<Arithmetic auto C1, Arithmetic auto C2>
+constexpr auto operator ^ (Constant<C1>, Constant<C2>) {
+    return Constant<std::pow(C1,  C2)>{};
+}
+//------------------------------------------------------
+// simplification rules
+template <Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator + (Functional auto f, Constant<C>) {
+    return f;
+}
+
+template <Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator + (Constant<C>, Functional auto f) {
+    return f;
+}
+
+template <Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator - (Functional auto f, Constant<C>) {
+    return f;
+}
+
+template <Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator * (Functional auto f, Constant<C> zero) {
+    return zero;
+}
+
+template <Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator * (Constant<C> zero, Functional auto f) {
+    return zero;
+}
+
+template <Arithmetic auto C>
+requires (C == 1)
+constexpr auto operator * (Functional auto f, Constant<C>) {
+    return f;
+}
+
+template <Arithmetic auto C>
+requires (C == 1)
+constexpr auto operator * (Constant<C>, Functional auto f) {
+    return f;
+}
+
+
+template <Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator / (Constant<C> zero, Functional auto f) {
+    return zero;
+}
+
+template <Arithmetic auto C>
+requires (C == 1)
+constexpr auto operator / (Functional auto f, Constant<C>) {
+    return f;
+}
+
+template<Arithmetic auto C>
+requires (C == 0)
+constexpr auto operator ^ (Functional auto f, Constant<C>) {
+    return kOne;
+}
+
+template<Arithmetic auto C>
+requires (C == 1)
+constexpr auto operator ^ (Functional auto f, Constant<C>) {
+    return f;
+}
+
+
 template <Arithmetic T>
-struct RTConstant : DifferentialBase {
+struct RTConstant : BasicFunction {
     const T value;
     explicit constexpr RTConstant(T val) : value(val) {} 
 

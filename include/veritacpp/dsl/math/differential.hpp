@@ -31,17 +31,17 @@ concept DifferentialVariable = detail::IsVariable<T>::value;
 
 
 template <Arithmetic auto C, DifferentialVariable X>
-constexpr Differentiable auto diff(Constant<C>, X x) {
+constexpr Functional auto diff(Constant<C>, X x) {
     return kZero;
 }
 
 template <Arithmetic T, DifferentialVariable X>
-constexpr Differentiable auto diff(RTConstant<T>, X x) {
+constexpr Functional auto diff(RTConstant<T>, X x) {
     return kZero;
 }
 
 template <uint64_t N, uint64_t M>
-constexpr Differentiable auto diff(Variable<N>, Variable<M>) {
+constexpr Functional auto diff(Variable<N>, Variable<M>) {
     if constexpr( N == M) {
         return kOne;
     } else {
@@ -50,42 +50,42 @@ constexpr Differentiable auto diff(Variable<N>, Variable<M>) {
 }
 
 
-template<Differentiable F, DifferentialVariable X>
-constexpr Differentiable auto diff(Negate<F> nf, X x) {
+template<Functional F, DifferentialVariable X>
+constexpr Functional auto diff(Negate<F> nf, X x) {
     return -diff(nf.f, x);
 }
 
 
 
 
-template<Differentiable A, Differentiable B, DifferentialVariable X>
-constexpr Differentiable auto diff(Add<A, B> s, X x) {
+template<Functional A, Functional B, DifferentialVariable X>
+constexpr Functional auto diff(Add<A, B> s, X x) {
     return diff(s.f1, x) + diff(s.f2, x);
 }
 
 
-template<Differentiable A, Differentiable B, DifferentialVariable X>
-constexpr Differentiable auto diff(Sub<A, B> s, X x) {
+template<Functional A, Functional B, DifferentialVariable X>
+constexpr Functional auto diff(Sub<A, B> s, X x) {
     return diff(s.f1, x) - diff(s.f2, x);
 }
 
 
-template <Differentiable F1, Differentiable F2, DifferentialVariable X>
-constexpr Differentiable auto diff(Mul<F1, F2> m, X x) { 
+template <Functional F1, Functional F2, DifferentialVariable X>
+constexpr Functional auto diff(Mul<F1, F2> m, X x) { 
     return diff(m.f1, x) * m.f2 + m.f1 * diff(m.f2, x);
 };
 
 
-template <Differentiable F1, Differentiable F2, DifferentialVariable X>
-constexpr Differentiable auto diff(Div<F1, F2> d, X x) { 
+template <Functional F1, Functional F2, DifferentialVariable X>
+constexpr Functional auto diff(Div<F1, F2> d, X x) { 
     return (diff(d.f1, x) * d.f2 - d.f1 * diff(d.f2, x)) / (d.f2 * d.f2);
 };
 
 
 namespace detail {
 
-template <Differentiable F, DifferentialVariable X, Differentiable... Gs>
-static constexpr Differentiable auto apply_chain_rule(F f, X x, Gs... gs) {
+template <Functional F, DifferentialVariable X, Functional... Gs>
+static constexpr Functional auto apply_chain_rule(F f, X x, Gs... gs) {
     const auto g_binging = (gs, ...);
     constexpr auto g_cnt = sizeof...(gs);
     const auto g_tuple = std::make_tuple(gs...);
@@ -117,8 +117,8 @@ static constexpr Differentiable auto apply_chain_rule(F f, X x, Gs... gs) {
 
 }
 
-template <Differentiable F, Differentiable... Gs, DifferentialVariable X>
-constexpr Differentiable auto diff(App<F, Gs...> ap, X x) {
+template <Functional F, Functional... Gs, DifferentialVariable X>
+constexpr Functional auto diff(App<F, Gs...> ap, X x) {
     return std::apply([&](Gs... gs){
          return detail::apply_chain_rule(ap.f, x, gs...);
     },  ap.gs);
@@ -128,7 +128,7 @@ constexpr Differentiable auto diff(App<F, Gs...> ap, X x) {
 
 
 template <Arithmetic auto C, uint64_t xid>
-constexpr Differentiable auto diff(Pow<C>, Variable<xid>) {
+constexpr Functional auto diff(Pow<C>, Variable<xid>) {
     if constexpr(xid != 0) {
         return kZero;
     }
@@ -140,7 +140,7 @@ constexpr Differentiable auto diff(Pow<C>, Variable<xid>) {
 
 
 template <Arithmetic T, uint64_t xid>
-constexpr Differentiable auto diff(RTPow<T> pw, Variable<xid>) {
+constexpr Functional auto diff(RTPow<T> pw, Variable<xid>) {
     if constexpr(xid != 0) {
         return kZero;
     }
@@ -152,26 +152,20 @@ constexpr Differentiable auto diff(RTPow<T> pw, Variable<xid>) {
 
 
 template <uint64_t xid>
-constexpr Differentiable auto diff(Sin, Variable<xid>) {
+constexpr Functional auto diff(Sin, Variable<xid>) {
     if constexpr(xid != 0) {
         return kZero;
     }
     return Cos{};
 }
 template <uint64_t xid>
-constexpr Differentiable auto diff(Cos, Variable<xid>) {
+constexpr Functional auto diff(Cos, Variable<xid>) {
     if constexpr(xid != 0) {
         return kZero;
     }
     return -Sin{};
 }
 
-constexpr Differentiable auto sin(Differentiable auto f) {
-    return Sin{} | f;
-}
 
-constexpr Differentiable auto cos(Differentiable auto f) {
-    return Cos{} | f;
-}
 
 } // veritacpp::dsl

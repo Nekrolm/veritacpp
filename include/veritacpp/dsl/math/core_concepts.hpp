@@ -5,10 +5,10 @@
 
 namespace veritacpp::dsl::math {
 
-struct DifferentialBase {};
+struct BasicFunction {};
 
 template <class T>
-concept Differentiable = std::is_base_of_v<DifferentialBase, T>;
+concept Functional = std::is_base_of_v<BasicFunction, T>;
 
 template <class T>
 concept Arithmetic = std::is_arithmetic_v<T>;
