@@ -148,9 +148,6 @@ constexpr Functional auto diff(RTPow<T> pw, Variable<xid>) {
 }
 
 
-
-
-
 template <uint64_t xid>
 constexpr Functional auto diff(Sin, Variable<xid>) {
     if constexpr(xid != 0) {
@@ -164,6 +161,21 @@ constexpr Functional auto diff(Cos, Variable<xid>) {
         return kZero;
     }
     return -Sin{};
+}
+
+template <uint64_t xid>
+constexpr Functional auto diff(Exp, Variable<xid>) {
+    if constexpr(xid != 0) {
+        return kZero;
+    }
+    return Exp{};
+}
+template <uint64_t xid>
+constexpr Functional auto diff(Log, Variable<xid> x) {
+    if constexpr(xid != 0) {
+        return kZero;
+    }
+    return kOne / x;
 }
 
 

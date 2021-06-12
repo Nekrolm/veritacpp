@@ -29,4 +29,8 @@ Functional auto operator / (Variable<N>, Variable<M>) {
     return kOne;
 }
 
+// Veriable<N> requires at least N+1 arguments
+static_assert(!(NVariablesFunctional<2, Variable<2>>));
+
+
 }

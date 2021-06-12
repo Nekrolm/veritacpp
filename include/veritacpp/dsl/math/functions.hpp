@@ -15,7 +15,9 @@ struct Negate : BasicFunction {
     F f;
     explicit constexpr Negate(F f) : f(f) {}
 
-    constexpr Arithmetic auto operator()(Arithmetic auto... x) const {
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const 
+    requires NVariablesFunctional<sizeof...(x), F>
+    {
         return -(f(x...));
     } 
 };
@@ -44,7 +46,7 @@ struct Add : BasicFunction {
 };
 
 constexpr Functional auto operator + (Functional auto a, 
-                                          Functional auto b) {
+                                      Functional auto b) {
     return Add { a, b };
 }
 
@@ -84,7 +86,7 @@ struct Mul : BasicFunction {
 
 
 constexpr Functional auto operator * (Functional auto f1, 
-                                          Functional auto f2) {
+                                      Functional auto f2) {
     return Mul { f1, f2 };
 }
 
@@ -97,7 +99,7 @@ struct Div : BasicFunction {
     constexpr Arithmetic auto operator()(Arithmetic auto... x) const
     requires NVariablesFunctional<sizeof...(x), F1> 
           && NVariablesFunctional<sizeof...(x), F2> {
-        return f1(x...) / f2(x...);
+        return f1(x...) / static_cast<double>(f2(x...));
     }
 };
 
@@ -114,8 +116,7 @@ struct App : BasicFunction {
     constexpr explicit App(F f, std::tuple<Gs...> gs) : f(f), gs{gs} {}
     
 
-    template<Arithmetic... Args>
-    constexpr Arithmetic auto operator()(Args... x) const 
+    constexpr Arithmetic auto operator()(Arithmetic auto... x) const 
     requires NVariablesFunctional<std::max(sizeof...(Gs), sizeof...(x)), F> 
              && (NVariablesFunctional<sizeof...(x), Gs> && ...)
     {
@@ -239,7 +240,7 @@ struct RTPow : BasicFunction {
 
 template <Arithmetic T>
 constexpr Functional auto operator ^ (Functional auto f, 
-                                          RTConstant<T> c) {
+                                      RTConstant<T> c) {
     return RTPow<T>{c} | f;
 } 
 
@@ -305,6 +306,13 @@ struct Exp : BasicFunction {
     }
 };
 
+struct Log : BasicFunction {
+    template <Arithmetic X, Arithmetic... Args>
+    constexpr Arithmetic auto operator()(X x, Args...) const {
+       return std::log(x);
+    }
+};
+
 constexpr Functional auto sin(Functional auto f) {
     return Sin{} | f;
 }
@@ -313,5 +321,69 @@ constexpr Functional auto cos(Functional auto f) {
     return Cos{} | f;
 }
 
+constexpr Functional auto exp(Functional auto f) {
+    return Exp{} | f;
+}
+
+constexpr Functional auto log(Functional auto f) {
+    return Log{} | f;
+}
+
+// simplification for constants
+template <Arithmetic X>
+constexpr Functional auto sin(X x) {
+    return RTConstant { Sin{}(x) }; 
+}
+template <Arithmetic X>
+constexpr Functional auto sin(RTConstant<X> x) {
+    return RTConstant { Sin{}(x()) }; 
+}
+template <Arithmetic auto X>
+constexpr Functional auto sin(Constant<X>) {
+    return Constant<Sin{}(X)>{}; 
+}
+template <Arithmetic X>
+constexpr Functional auto cos(X x) {
+    return RTConstant { Cos{}(x) }; 
+}
+template <Arithmetic X>
+constexpr Functional auto cos(RTConstant<X> x) {
+    return RTConstant { Cos{}(x()) }; 
+}
+template <Arithmetic auto X>
+constexpr Functional auto cos(Constant<X>) {
+    return Constant<Cos{}(X)>{}; 
+}
+template <Arithmetic X>
+constexpr Functional auto exp(X x) {
+    return RTConstant { Exp{}(x) }; 
+}
+template <Arithmetic X>
+constexpr Functional auto exp(RTConstant<X> x) {
+    return RTConstant { Exp{}(x()) }; 
+}
+template <Arithmetic auto X>
+constexpr Functional auto exp(Constant<X>) {
+    return Constant<Exp{}(X)>{};
+}
+template <Arithmetic X>
+constexpr Functional auto log(X x) {
+    return RTConstant { Log{}(x) }; 
+}
+template <Arithmetic X>
+constexpr Functional auto log(RTConstant<X> x) {
+    return RTConstant { Log{}(x()) }; 
+}
+template <Arithmetic auto X>
+requires (X > 0)
+constexpr Functional auto log(Constant<X>) {
+    return Constant<Log{}(X)>{};
+}
+
+
+constexpr Functional auto operator ^ (Functional auto f,
+                                      Functional auto g) {
+    return exp(log(f) * g);
+}
 
 }

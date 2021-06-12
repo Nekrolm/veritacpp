@@ -4,6 +4,7 @@
 #include <iostream>
 
 int main() {
+
     using namespace veritacpp::dsl::math;
 
     constexpr auto x = Variable<0>{};
@@ -82,8 +83,13 @@ int main() {
     }
 
 
-    constexpr auto test_f = sin(x) - x + Constant<0>{};
-    // test_f();
+    {
+        constexpr auto x_pow_x = x ^ x;
+        static_assert(x_pow_x(2) == 4);
+        constexpr auto dx_pow_x = diff(x_pow_x, x);
+        static_assert(dx_pow_x(2) == ((x^x) * (log(x) + 1))(2));
+    }
+    
 
     {
         // constexpr auto x_add_y = x + y;

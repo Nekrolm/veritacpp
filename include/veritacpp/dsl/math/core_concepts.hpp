@@ -16,20 +16,12 @@ concept Arithmetic = std::is_arithmetic_v<T>;
 
 namespace detail {
 
-template <uint64_t N, class F, class = void>
-struct IsInvocableWithNArithmetics : std::false_type {};
 
 template <uint64_t N, class F>
-struct IsInvocableWithNArithmetics<N, F, 
-decltype(void(std::apply(std::declval<F>(), std::array<double, N>{})))
-> : std::true_type {};
-
-template <uint64_t N, class F>
-constexpr bool is_invocable_with_N_arithmetics = requires (F f) {
-    []<uint64_t... idx>(F f, std::integer_sequence<uint64_t, idx...>){
-        f((idx, 0.f)...);
-    }(f, std::make_index_sequence<N>{});
-};
+constexpr bool is_invocable_with_N_arithmetics = []<uint64_t... idx>(
+        std::integer_sequence<uint64_t, idx...>){
+        return std::is_invocable_v<F, decltype(static_cast<float>(idx))...>;
+    }(std::make_index_sequence<N>{});
 }
 
 template <uint64_t N, class T>
