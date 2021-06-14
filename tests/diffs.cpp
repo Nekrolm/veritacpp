@@ -11,6 +11,26 @@ int main() {
     constexpr auto y = Variable<1>{};
     constexpr auto z = Variable<2>{};
     
+    constexpr auto f = x * y;
+    constexpr auto g = x + x;
+
+    constexpr auto binding = (x=f, y=g);
+
+    static_assert(binding(x)(3,5) == 3 * 5); // f;
+    static_assert(binding(y)(5) == 5 + 5); // g
+    static_assert(binding(z)(0,0,0) == 0); // z
+    static_assert(binding(z)(0,0,4) == 4); // z
+
+   
+
+    {
+        constexpr auto f = sin(x + y);
+        constexpr auto g = f | (y=2*x, x=3*x);
+        static_assert(g(4) == sin(5*x)(4));
+    }
+
+    // constexpr auto wrong_binding = (x=f, x=g);
+
     constexpr auto x_y = x + y;
     static_assert((x_y)(5, 4) == 9);
 
@@ -92,9 +112,9 @@ int main() {
     
 
     {
-        // constexpr auto x_add_y = x + y;
-        // constexpr auto f = x_add_y | (x=sin(y), y=x^2);
-        // static_assert(f(3,4) == std::sin(4) + 3*3);
+        constexpr auto x_add_y = x + y;
+        constexpr auto f = x_add_y | (x=sin(y), y=x^2);
+        static_assert(f(3,4) == std::sin(4) + 3*3);
     }
 
 }

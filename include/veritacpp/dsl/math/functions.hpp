@@ -211,6 +211,14 @@ constexpr Functional auto operator | (F f, detail::BindingTuple<G...> g) {
     return App<F, G...> { f, g.as_tuple() };
 }
 
+template <Functional F, VariableBinding... Vars> 
+constexpr Functional auto operator | (F f, VariableBindingGroup<Vars... > group) {
+    return f | [&group]<uint64_t... idx>(std::integer_sequence<uint64_t, idx...>){
+        return (group(Variable<idx>{}),...);
+    }(std::make_index_sequence<group.MaxVariableID + 1>{});
+}
+
+
 template <Arithmetic auto C>
 struct Pow : BasicFunction {
     constexpr Arithmetic auto operator()(Arithmetic auto x, 
