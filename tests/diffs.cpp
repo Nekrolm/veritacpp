@@ -29,7 +29,7 @@ int main() {
         static_assert(g(4) == sin(5*x)(4));
     }
 
-    // constexpr auto wrong_binding = (x=f, x=g);
+    constexpr auto wrong_binding = (x=x, y=g);
 
     constexpr auto x_y = x + y;
     static_assert((x_y)(5, 4) == 9);
